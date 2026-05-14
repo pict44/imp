@@ -21,6 +21,14 @@ if (-not (Test-Path $PROFILE)) {
     New-Item -Type File -Path $PROFILE -Force | Out-Null
 }
 
+# --- NEW FIX: Prevent duplicate code in the profile ---
+$ProfileContent = Get-Content -Path $PROFILE -Raw -ErrorAction SilentlyContinue
+if ($ProfileContent -match "Faaah Sound on Failed Command") {
+    Write-Host " The sound hook is already installed in your profile. Skipping to prevent duplicates!" -ForegroundColor Yellow
+    Write-Host " Installation complete! Please restart PowerShell." -ForegroundColor Green
+    exit
+}
+
 Write-Host "Adding hook to `$PROFILE..." -ForegroundColor Cyan
 
 # Prepare the code block. We use backticks (`) to escape the $ signs 
@@ -34,9 +42,10 @@ function prompt {
     `$lastExitCode = `$LASTEXITCODE
 
     if (-not `$lastCommandSucceeded -or (`$null -ne `$lastExitCode -and `$lastExitCode -ne 0)) {
-        `$wmp = New-Object -ComObject WMPlayer.OCX
-        `$wmp.settings.autoStart = `$true
-        `$wmp.URL = "$SoundDestFile"
+        # --- NEW FIX: Using global variable so the sound doesn't cut out ---
+        `$global:wmp = New-Object -ComObject WMPlayer.OCX
+        `$global:wmp.settings.autoStart = `$true
+        `$global:wmp.URL = "$SoundDestFile"
     }
 
     `$global:LASTEXITCODE = `$lastExitCode
