@@ -21,7 +21,7 @@ if (-not (Test-Path $PROFILE)) {
     New-Item -Type File -Path $PROFILE -Force | Out-Null
 }
 
-# --- NEW FIX: Prevent duplicate code in the profile ---
+# Prevent duplicate code in the profile
 $ProfileContent = Get-Content -Path $PROFILE -Raw -ErrorAction SilentlyContinue
 if ($ProfileContent -match "Faaah Sound on Failed Command") {
     Write-Host " The sound hook is already installed in your profile. Skipping to prevent duplicates!" -ForegroundColor Yellow
@@ -31,21 +31,23 @@ if ($ProfileContent -match "Faaah Sound on Failed Command") {
 
 Write-Host "Adding hook to `$PROFILE..." -ForegroundColor Cyan
 
-# Prepare the code block. We use backticks (`) to escape the $ signs 
-# so they are written literally to the profile instead of executing right now.
+# Prepare the code block.
 $HookCode = @"
 
 # --- Faaah Sound on Failed Command ---
+# Load the modern audio engine
+Add-Type -AssemblyName PresentationCore
+
 `$global:OriginalPrompt = `$function:prompt
 function prompt {
     `$lastCommandSucceeded = `$?
     `$lastExitCode = `$LASTEXITCODE
 
     if (-not `$lastCommandSucceeded -or (`$null -ne `$lastExitCode -and `$lastExitCode -ne 0)) {
-        # --- NEW FIX: Using global variable so the sound doesn't cut out ---
-        `$global:wmp = New-Object -ComObject WMPlayer.OCX
-        `$global:wmp.settings.autoStart = `$true
-        `$global:wmp.URL = "$SoundDestFile"
+        # Play the sound using WPF MediaPlayer
+        `$global:wmp = New-Object System.Windows.Media.MediaPlayer
+        `$global:wmp.Open("$SoundDestFile")
+        `$global:wmp.Play()
     }
 
     `$global:LASTEXITCODE = `$lastExitCode
